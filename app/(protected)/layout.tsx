@@ -11,23 +11,30 @@ const nav: Array<[string, string, Role[]]> = [
   ["Team roster", "/roster", ["CLUB_ADMIN", "STAFF"]],
   ["Team schedule", "/schedule", ["STAFF", "CLUB_ADMIN"]],
   ["Athlete overview", "/athlete", ["ATHLETE"]],
+  ["Parent overview", "/parent", ["PARENT"]],
+  ["Schedule", "/parent/schedule", ["PARENT"]],
   ["Meals", "/meals", ["ATHLETE", "PARENT"]],
   ["Club meal library", "/library", ["ATHLETE", "PARENT", "STAFF", "CLUB_ADMIN"]],
   ["My fueling profile", "/profile", ["ATHLETE", "PARENT"]],
-  ["Parent overview", "/parent", ["PARENT"]],
   ["Safety", "/safety", ["ATHLETE", "PARENT", "STAFF", "CLUB_ADMIN"]]
 ] as const;
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();
   if (!session.user.role) redirect("/signin");
+  const parentOrder = new Map([
+    ["Parent overview", 0],
+    ["Schedule", 1],
+    ["Meals", 2],
+    ["Club meal library", 3],
+    ["My fueling profile", 4],
+    ["Safety", 5]
+  ]);
   const allowed = nav
     .filter(([, , roles]) => roles.includes(session.user.role))
     .sort(([labelA], [labelB]) => {
       if (session.user.role !== "PARENT") return 0;
-      if (labelA === "Parent overview") return -1;
-      if (labelB === "Parent overview") return 1;
-      return 0;
+      return (parentOrder.get(labelA) ?? 99) - (parentOrder.get(labelB) ?? 99);
     });
 
   return (
@@ -50,7 +57,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
         </div>
         <nav className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 pb-3" aria-label="Main navigation">
           {allowed.map(([label, href]) => (
-            <AppNavLink key={href} href={href} label={label} />
+            <AppNavLink key={href} href={href} label={label} exact={href === "/parent"} />
           ))}
         </nav>
       </header>

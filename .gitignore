@@ -8,3 +8,5 @@ coverage
 tsconfig.tsbuildinfo
 *.log
 .next-build/
+.vercel
+.env*.local

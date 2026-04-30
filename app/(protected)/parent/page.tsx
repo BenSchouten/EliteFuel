@@ -1,14 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AskEliteFuelCard } from "@/components/ask-elitefuel-card";
-import { TeamScheduleCalendar } from "@/components/team-schedule-calendar";
 import { Badge, Panel, PageHeader, Select } from "@/components/ui";
 import { UrineColorTrendSummary } from "@/components/urine-color-trend";
 import { parentHydrationSummary } from "@/lib/hydration-trend";
 import { mealFeedbackSummary } from "@/lib/meal-feedback";
 import { prisma } from "@/lib/prisma";
-import { monthStartFromParam } from "@/lib/schedule-calendar";
-import { getPlannedTeamScheduleEntries, getTeamScheduleRhythm } from "@/lib/schedule-data";
 import { effectiveDayType, dayTypeLabel, athleteName } from "@/lib/schedule";
 import { requireSession } from "@/lib/session";
 
@@ -81,9 +78,6 @@ export default async function ParentOverviewPage({ searchParams }: { searchParam
     );
   }
   const context = effectiveDayType(athlete.team.defaults, athlete.overrides);
-  const visibleMonth = monthStartFromParam(searchParams.month);
-  const plannedEntries = await getPlannedTeamScheduleEntries(athlete.teamId, visibleMonth);
-  const scheduleRhythm = await getTeamScheduleRhythm(athlete.teamId);
   const fluidEntries = await prisma.fluidCheckIn.findMany({
     where: { athleteId: athlete.id, urineColor: { not: null } },
     orderBy: { createdAt: "desc" },
@@ -108,7 +102,6 @@ export default async function ParentOverviewPage({ searchParams }: { searchParam
                 {linkedAthletes.map((link) => <option key={link.athleteId} value={link.athleteId}>{athleteName(link.athlete)}</option>)}
               </Select>
             </label>
-            <input type="hidden" name="month" value={searchParams.month ?? ""} />
             <button type="submit" className="focus-ring rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-semibold shadow-sm hover:bg-fuel-mint">View child</button>
           </form>
         ) : (
@@ -241,6 +234,16 @@ export default async function ParentOverviewPage({ searchParams }: { searchParam
           <Link className="mt-4 inline-flex rounded-lg bg-fuel-green px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-800" href="/library">Open club meal library</Link>
         </Panel>
         <Panel>
+          <Badge tone={context.override ? "amber" : "green"}>{context.override ? "Athlete-specific change" : "Team schedule"}</Badge>
+          <h2 className="mt-3 text-xl font-semibold">Schedule at a glance</h2>
+          <p className="mt-2 text-stone-700">
+            Today is {dayTypeLabel(context.dayType).toLowerCase()} for {athlete.firstName}. Open the full monthly schedule for training, match, travel, rest, and athlete-specific changes.
+          </p>
+          <Link className="mt-4 inline-flex rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-semibold shadow-sm hover:bg-fuel-mint" href={`/parent/schedule?athlete=${athlete.id}`}>
+            View full schedule
+          </Link>
+        </Panel>
+        <Panel>
           <h2 className="text-xl font-semibold">Food safety and profile updates</h2>
           <p className="mt-2 text-stone-700">
             Update allergies, dietary restrictions, food preferences, parent contact info, and basic fueling profile details. Staff-only rehab notes and internal follow-ups stay protected.
@@ -248,18 +251,6 @@ export default async function ParentOverviewPage({ searchParams }: { searchParam
           <Link className="mt-4 inline-flex rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-semibold shadow-sm hover:bg-fuel-mint" href="/profile">Update {athlete.firstName}’s profile</Link>
         </Panel>
       </div>
-      <Panel className="mt-5">
-        <TeamScheduleCalendar
-          basePath="/parent"
-          defaults={scheduleRhythm}
-          month={visibleMonth}
-          plannedEntries={plannedEntries}
-          teamName={athlete.team.name}
-          athleteOverrides={athlete.overrides}
-          queryParams={{ athlete: athlete.id }}
-          readOnly
-        />
-      </Panel>
     </>
   );
 }
