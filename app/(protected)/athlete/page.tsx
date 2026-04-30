@@ -2,18 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, CalendarDays, Utensils } from "lucide-react";
 import { AskEliteFuelCard } from "@/components/ask-elitefuel-card";
-import { TeamScheduleCalendar } from "@/components/team-schedule-calendar";
 import { Badge, Panel, PageHeader } from "@/components/ui";
 import { UrineColorTrendSummary } from "@/components/urine-color-trend";
 import { getPrimaryAthlete } from "@/lib/data";
-import { dayLabel } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
-import { monthStartFromParam } from "@/lib/schedule-calendar";
-import { getPlannedTeamScheduleEntries, getTeamScheduleRhythm } from "@/lib/schedule-data";
-import { athleteName, dayTypeLabel, effectiveDayType, weeklyPlan } from "@/lib/schedule";
+import { athleteName, dayTypeLabel, effectiveDayType } from "@/lib/schedule";
 import { requireSession } from "@/lib/session";
 
-export default async function AthleteOverviewPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
+export default async function AthleteOverviewPage() {
   const session = await requireSession();
   if (session.user.role === "CLUB_ADMIN") redirect("/admin");
   if (session.user.role === "STAFF") redirect("/staff");
@@ -32,10 +28,6 @@ export default async function AthleteOverviewPage({ searchParams }: { searchPara
     );
   }
   const todayContext = effectiveDayType(athlete.team.defaults, athlete.overrides);
-  const week = weeklyPlan(athlete.team.defaults, athlete.overrides);
-  const visibleMonth = monthStartFromParam(searchParams.month);
-  const plannedEntries = await getPlannedTeamScheduleEntries(athlete.teamId, visibleMonth);
-  const scheduleRhythm = await getTeamScheduleRhythm(athlete.teamId);
   const adherence = athlete.mealLogs.length >= 3 ? "Steady recent logging" : "Needs a few more meal logs this week";
   const fluidEntries = await prisma.fluidCheckIn.findMany({
     where: { athleteId: athlete.id, urineColor: { not: null } },
@@ -90,33 +82,14 @@ export default async function AthleteOverviewPage({ searchParams }: { searchPara
           <UrineColorTrendSummary entries={fluidEntries} />
         </Panel>
       </div>
-      <Panel className="mt-5">
-        <div className="mb-4 flex items-center gap-2">
-          <CalendarDays size={18} aria-hidden />
-          <h2 className="text-lg font-semibold">Weekly schedule preview</h2>
-        </div>
-        <div className="grid gap-3 md:grid-cols-7">
-          {week.map((day) => (
-            <div key={day.date.toISOString()} className="rounded-md border border-stone-200 p-3">
-              <p className="text-xs font-semibold text-stone-500">{dayLabel(day.date)}</p>
-              <p className="mt-2 text-sm font-semibold">{dayTypeLabel(day.dayType)}</p>
-              {day.override ? <Badge tone="amber">Override</Badge> : null}
-            </div>
-          ))}
-        </div>
-      </Panel>
-      <Panel className="mt-5">
-        <TeamScheduleCalendar
-          basePath="/athlete"
-          defaults={scheduleRhythm}
-          month={visibleMonth}
-          plannedEntries={plannedEntries}
-          teamName={athlete.team.name}
-          athleteOverrides={athlete.overrides}
-          readOnly
-        />
-      </Panel>
-      <div className="mt-5 grid gap-5 md:grid-cols-2">
+      <div className="mt-5 grid gap-5 md:grid-cols-3">
+        <Link href="/athlete/schedule" className="rounded-lg border border-stone-200 bg-white p-5 shadow-soft hover:border-fuel-green">
+          <CalendarDays size={20} aria-hidden />
+          <p className="mt-3 font-semibold">Schedule at a glance</p>
+          <p className="mt-1 text-sm text-stone-600">
+            Today is {dayTypeLabel(todayContext.dayType).toLowerCase()}. View the full monthly schedule and athlete-specific changes.
+          </p>
+        </Link>
         <Link href="/meals" className="rounded-lg border border-stone-200 bg-white p-5 shadow-soft hover:border-fuel-green">
           <Utensils size={20} aria-hidden />
           <p className="mt-3 font-semibold">Log or correct meals</p>

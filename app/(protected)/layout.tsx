@@ -11,6 +11,7 @@ const nav: Array<[string, string, Role[]]> = [
   ["Team roster", "/roster", ["CLUB_ADMIN", "STAFF"]],
   ["Team schedule", "/schedule", ["STAFF", "CLUB_ADMIN"]],
   ["Athlete overview", "/athlete", ["ATHLETE"]],
+  ["Schedule", "/athlete/schedule", ["ATHLETE"]],
   ["Parent overview", "/parent", ["PARENT"]],
   ["Schedule", "/parent/schedule", ["PARENT"]],
   ["Meals", "/meals", ["ATHLETE", "PARENT"]],
@@ -57,7 +58,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
         </div>
         <nav className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 pb-3" aria-label="Main navigation">
           {allowed.map(([label, href]) => (
-            <AppNavLink key={href} href={href} label={label} exact={href === "/parent"} />
+            <AppNavLink key={href} href={href} label={label} exact={href === "/athlete" || href === "/parent"} />
           ))}
         </nav>
       </header>
