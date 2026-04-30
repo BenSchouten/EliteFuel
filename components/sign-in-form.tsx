@@ -16,8 +16,8 @@ const demoAccounts = [
 export function SignInForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const [email, setEmail] = useState("jordan.staff@elitefuel.demo");
-  const [password, setPassword] = useState("Demo123!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -55,6 +55,7 @@ export function SignInForm() {
       </form>
       <div className="mt-6 border-t border-stone-200 pt-5">
         <p className="text-sm font-semibold">Demo accounts</p>
+        <p className="mt-1 text-sm text-stone-600">Choose a demo account below or enter credentials manually.</p>
         <div className="mt-3 grid gap-2">
           {demoAccounts.map(([label, account]) => (
             <button
