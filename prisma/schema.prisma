@@ -1,0 +1,260 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CLUB_ADMIN
+  STAFF
+  ATHLETE
+  PARENT
+}
+
+enum DayType {
+  REST
+  TRAINING
+  MATCH
+  TRAVEL
+  REHAB
+  MODIFIED_LOAD
+  RETURN_TO_PLAY
+}
+
+enum OverrideReason {
+  INJURY
+  REHAB
+  TRAVEL
+  RETURN_TO_PLAY
+  MODIFIED_LOAD
+  REST
+  OTHER
+}
+
+enum FollowUpState {
+  NEW
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+  PRE_TRAINING
+  POST_TRAINING
+}
+
+enum MealWindow {
+  MORNING
+  PRE_TRAINING
+  POST_TRAINING
+  EVENING
+  TRAVEL
+}
+
+model Club {
+  id        String     @id @default(cuid())
+  name      String
+  createdAt DateTime   @default(now())
+  users     User[]
+  teams     Team[]
+  meals     ClubMeal[]
+}
+
+model User {
+  id            String          @id @default(cuid())
+  email         String          @unique
+  passwordHash  String
+  name          String
+  role          Role
+  clubId        String
+  club          Club            @relation(fields: [clubId], references: [id])
+  athlete       Athlete?        @relation("AthleteUser")
+  parentLinks   ParentAthlete[] @relation("ParentUser")
+  staffTeams    StaffTeam[]
+  mealLogs      MealLog[]       @relation("MealLogger")
+  followUps     FollowUp[]      @relation("FollowUpUpdater")
+  libraryShares ClubMeal[]      @relation("LibrarySharer")
+}
+
+model Team {
+  id        String                @id @default(cuid())
+  clubId    String
+  club      Club                  @relation(fields: [clubId], references: [id])
+  name      String
+  sport     String
+  createdAt DateTime              @default(now())
+  athletes  Athlete[]
+  defaults  TeamScheduleDefault[]
+  entries   TeamScheduleEntry[]
+  staff     StaffTeam[]
+}
+
+model StaffTeam {
+  id     String @id @default(cuid())
+  userId String
+  teamId String
+  user   User   @relation(fields: [userId], references: [id])
+  team   Team   @relation(fields: [teamId], references: [id])
+
+  @@unique([userId, teamId])
+}
+
+model Athlete {
+  id                  String                    @id @default(cuid())
+  userId              String?                   @unique
+  user                User?                     @relation("AthleteUser", fields: [userId], references: [id])
+  clubId              String
+  teamId              String
+  team                Team                      @relation(fields: [teamId], references: [id])
+  firstName           String
+  lastName            String
+  age                 Int
+  sport               String
+  primaryGoal         String
+  dietaryRestrictions String
+  allergies           String
+  injuryStatus        String?
+  sex                 String?
+  position            String?
+  height              String?
+  weight              String?
+  foodPreferences     String?
+  rehabNotes          String?
+  parentContactName   String?
+  parentContactEmail  String?
+  createdAt           DateTime                  @default(now())
+  parentLinks         ParentAthlete[]
+  overrides           AthleteScheduleOverride[]
+  mealLogs            MealLog[]
+  fluidChecks         FluidCheckIn[]
+  followUps           FollowUp[]
+}
+
+model ParentAthlete {
+  id        String  @id @default(cuid())
+  parentId  String
+  athleteId String
+  parent    User    @relation("ParentUser", fields: [parentId], references: [id])
+  athlete   Athlete @relation(fields: [athleteId], references: [id])
+
+  @@unique([parentId, athleteId])
+}
+
+model TeamScheduleDefault {
+  id        String  @id @default(cuid())
+  teamId    String
+  team      Team    @relation(fields: [teamId], references: [id])
+  dayOfWeek Int
+  dayType   DayType
+  title     String
+  startTime String?
+  endTime   String?
+  notes     String?
+
+  @@unique([teamId, dayOfWeek])
+}
+
+model TeamScheduleEntry {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id])
+  date      DateTime
+  dayType   DayType
+  title     String
+  startTime String?
+  endTime   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teamId, date])
+}
+
+model AthleteScheduleOverride {
+  id        String         @id @default(cuid())
+  athleteId String
+  athlete   Athlete        @relation(fields: [athleteId], references: [id])
+  date      DateTime
+  dayType   DayType
+  reason    OverrideReason
+  note      String?
+  active    Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([athleteId, date])
+}
+
+model FollowUp {
+  id          String          @id @default(cuid())
+  athleteId   String
+  athlete     Athlete         @relation(fields: [athleteId], references: [id])
+  state       FollowUpState   @default(NEW)
+  note        String
+  reason      OverrideReason?
+  updatedById String
+  updatedBy   User            @relation("FollowUpUpdater", fields: [updatedById], references: [id])
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model MealLog {
+  id                       String     @id @default(cuid())
+  athleteId                String
+  athlete                  Athlete    @relation(fields: [athleteId], references: [id])
+  loggedById               String
+  loggedBy                 User       @relation("MealLogger", fields: [loggedById], references: [id])
+  mealType                 MealType
+  mealWindow               MealWindow
+  note                     String
+  displayTitle             String?
+  userDetails              String?
+  photoDescription         String?
+  photoComponents          String[]
+  extractedDescription     String
+  interpretationSource     String?
+  interpretationConfidence String?
+  components               String[]
+  qualityConcern           String?
+  suggestedImprovements    String[]
+  score                    Int
+  subScores                Json
+  createdAt                DateTime   @default(now())
+  clubMeal                 ClubMeal?
+}
+
+model FluidCheckIn {
+  id         String   @id @default(cuid())
+  athleteId  String
+  athlete    Athlete  @relation(fields: [athleteId], references: [id])
+  volumeOz   Int?
+  urineColor String?
+  note       String?
+  createdAt  DateTime @default(now())
+}
+
+model ClubMeal {
+  id           String     @id @default(cuid())
+  clubId       String
+  club         Club       @relation(fields: [clubId], references: [id])
+  sourceMealId String?    @unique
+  sourceMeal   MealLog?   @relation(fields: [sourceMealId], references: [id])
+  sharedById   String
+  sharedBy     User       @relation("LibrarySharer", fields: [sharedById], references: [id])
+  title        String
+  description  String
+  mealType     MealType
+  mealWindow   MealWindow
+  dayTypeFit   DayType[]
+  goalFit      String[]
+  tags         String[]
+  curatedCue   String?
+  score        Int
+  createdAt    DateTime   @default(now())
+}
